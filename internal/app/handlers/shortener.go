@@ -8,6 +8,7 @@ import (
 	"github.com/Slava02/URL_shortner/internal/entity"
 	"io"
 	"net/http"
+	"regexp"
 	"strings"
 )
 
@@ -19,7 +20,7 @@ func (r *RootHandler) post(w http.ResponseWriter, req *http.Request) {
 	u, err := io.ReadAll(req.Body)
 	origUrl := string(u)
 	if err != nil || !util.IsURL(string(u)) {
-		http.Error(w, fmt.Sprintf("Incorrect body:%Storage", origUrl), http.StatusBadRequest)
+		http.Error(w, fmt.Sprintf("Incorrect body:%s", origUrl), http.StatusBadRequest)
 		return
 	}
 
@@ -29,9 +30,9 @@ func (r *RootHandler) post(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	io.WriteString(w, fmt.Sprintf("%s/%s", config.Host, shortUrl.ID))
 	w.Header().Set("content-type", "text/plain")
 	w.WriteHeader(http.StatusCreated)
+	io.WriteString(w, fmt.Sprintf("%s/%s", config.Host, shortUrl.ID))
 }
 
 func (r *RootHandler) get(w http.ResponseWriter, req *http.Request) {
@@ -40,7 +41,7 @@ func (r *RootHandler) get(w http.ResponseWriter, req *http.Request) {
 
 	shortUrl, err := r.Storage.Get(id)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("couldn't get shorturl %w", err), http.StatusBadRequest)
+		http.Error(w, fmt.Sprintf("couldn't get shorturl %s", err.Error()), http.StatusBadRequest)
 		return
 	}
 
@@ -49,12 +50,14 @@ func (r *RootHandler) get(w http.ResponseWriter, req *http.Request) {
 }
 
 func (r *RootHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	switch req.Method {
-	case http.MethodGet:
-		r.get(w, req)
-	case http.MethodPost:
+	pat := regexp.MustCompile(`[A-Z,a-z,0-9]{8}`)
+	switch q := strings.TrimPrefix(req.URL.Path, "/"); {
+	case q == "" && req.Method == http.MethodPost:
 		r.post(w, req)
+	case pat.MatchString(q) && req.Method == http.MethodGet:
+		r.get(w, req)
 	default:
-		http.Error(w, fmt.Sprintf("Incorrect method: %Storage", req.Method), http.StatusBadRequest)
+		http.Error(w, fmt.Sprintf("Incorrect method: %s", req.Method), http.StatusBadRequest)
 	}
+
 }
