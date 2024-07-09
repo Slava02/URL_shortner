@@ -10,7 +10,7 @@ import (
 	"strconv"
 )
 
-//go:generate go run github.com/vektra/mockery/v2@v2.28.2 --name=URLDeleter
+//go:generate go run .github.com/vektra/mockery/v2@v2.28.2 --name=URLDeleter
 type URLDeleter interface {
 	DeleteUrl(id int) error
 }

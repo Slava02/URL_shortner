@@ -26,7 +26,7 @@ type Response struct {
 const aliasLength = 4
 const maxRetries = 5
 
-//go:generate go run github.com/vektra/mockery/v2@v2.43.2 --name=URLSaver
+//go:generate go run .github.com/vektra/mockery/v2@v2.43.2 --name=URLSaver
 type URLSaver interface {
 	SaveUrl(urlToSave string, alias string) (int64, error)
 	ExistsAlias(alias string) (bool, error)

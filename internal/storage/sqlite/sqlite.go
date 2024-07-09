@@ -7,7 +7,7 @@ import (
 	"github.com/Slava02/URL_shortner/internal/storage"
 	"github.com/mattn/go-sqlite3"
 
-	_ "github.com/mattn/go-sqlite3"
+	_ ".github.com/mattn/go-sqlite3"
 )
 
 //  TODO: подключить миграции
