@@ -54,7 +54,7 @@ func (s *Storage) SaveUrl(urlToSave string, alias string) (int64, error) {
 	res, err := stmt.Exec(urlToSave, alias)
 	if err != nil {
 		//  TODO: refactor
-		if sqliteErr, ok := err.(sqlite3.Error); ok && sqliteErr.ExtendedCode == sqlite3.ErrConstraintCheck {
+		if sqliteErr, ok := err.(sqlite3.Error); ok && sqliteErr.Code == sqlite3.ErrConstraint {
 			return 0, fmt.Errorf("%s: %w", op, storage.ErrURLExists)
 		}
 
@@ -69,16 +69,16 @@ func (s *Storage) SaveUrl(urlToSave string, alias string) (int64, error) {
 	return id, nil
 }
 
-func (s *Storage) GetUrl(id int) (string, error) {
+func (s *Storage) GetURL(alias string) (string, error) {
 	const op = "storage.sqlite.GetUrl"
 
-	stmt, err := s.db.Prepare("SELECT url FROM url WHERE id = ?")
+	stmt, err := s.db.Prepare("SELECT url FROM url WHERE alias = ?")
 	if err != nil {
 		return "", fmt.Errorf("%s: prepar statement: %w", op, err)
 	}
 
 	var resUrl string
-	err = stmt.QueryRow(id).Scan(resUrl)
+	err = stmt.QueryRow(alias).Scan(&resUrl)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return "", storage.ErrURLNotFound
@@ -90,15 +90,15 @@ func (s *Storage) GetUrl(id int) (string, error) {
 	return resUrl, nil
 }
 
-func (s *Storage) DeleteUrl(alias string) error {
+func (s *Storage) DeleteUrl(id int) error {
 	const op = "storage.sqlite.DeleteUrl"
 
-	stmt, err := s.db.Prepare("DELETE from url WHERE alias = ?")
+	stmt, err := s.db.Prepare("DELETE from url WHERE id = ?")
 	if err != nil {
 		return fmt.Errorf("%s: prepare statement: %w", op, err)
 	}
 
-	_, err = stmt.Exec(alias)
+	_, err = stmt.Exec(id)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return storage.ErrURLNotFound
@@ -118,13 +118,15 @@ func (s *Storage) ExistsAlias(alias string) (bool, error) {
 		return false, fmt.Errorf("%s: prepare statement: %w", op, err)
 	}
 
-	_, err = stmt.Exec(alias)
+	row := stmt.QueryRow(alias)
+
+	var id int
+	err = row.Scan(&id)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return false, nil
-		} else {
-			return false, fmt.Errorf("%s: excecute statement: %w", op, err)
+		if err != sql.ErrNoRows {
+			return false, fmt.Errorf("%s: internal service error: %w", op, err)
 		}
+		return false, nil
 	}
 
 	return true, nil
